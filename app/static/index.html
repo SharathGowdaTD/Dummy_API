@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Retail API Tester</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #fff; --text: #1d2330; --muted: #6b7280; --border: #e3e6eb;
+    --accent: #2b59c3; --get: #1f8a5b; --post: #2b59c3; --put: #b7791f; --patch: #7c4dbd; --delete: #c53030;
+    --ok-bg: #e7f6ee; --ok: #1f8a5b; --warn-bg: #fdf3e1; --warn: #a3620a; --err-bg: #fdecec; --err: #c53030;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12151b; --panel: #1a1e26; --text: #e6e8ec; --muted: #9aa1ad; --border: #2a303b;
+      --ok-bg: #12301f; --warn-bg: #33270f; --err-bg: #3a1717;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); }
+  header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; padding: 12px 20px; background: var(--panel); border-bottom: 1px solid var(--border); }
+  header h1 { font-size: 16px; margin: 0; }
+  header a { color: var(--accent); }
+  .auth { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .pill { padding: 3px 10px; border-radius: 999px; background: var(--bg); border: 1px solid var(--border); font-size: 12px; }
+  input, textarea, select { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; }
+  textarea { width: 100%; min-height: 160px; font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; }
+  button { font: inherit; cursor: pointer; border: 0; border-radius: 6px; padding: 7px 14px; background: var(--accent); color: #fff; }
+  button.ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  main { display: grid; grid-template-columns: 320px 1fr; min-height: calc(100vh - 58px); }
+  nav { border-right: 1px solid var(--border); overflow-y: auto; max-height: calc(100vh - 58px); background: var(--panel); }
+  nav h3 { margin: 0; padding: 12px 16px 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  nav button { display: flex; gap: 8px; width: 100%; text-align: left; background: transparent; color: var(--text); border-radius: 0; padding: 6px 16px; }
+  nav button:hover, nav button.active { background: var(--bg); }
+  .m { display: inline-block; min-width: 52px; font-size: 11px; font-weight: 700; font-family: ui-monospace, Menlo, monospace; }
+  .m.GET { color: var(--get); } .m.POST { color: var(--post); } .m.PUT { color: var(--put); } .m.PATCH { color: var(--patch); } .m.DELETE { color: var(--delete); }
+  .path { font-family: ui-monospace, Menlo, monospace; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  section.work { padding: 20px; display: grid; gap: 16px; align-content: start; min-width: 0; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px; min-width: 0; }
+  .req { display: flex; gap: 8px; align-items: center; }
+  .req input { flex: 1; font-family: ui-monospace, Menlo, monospace; min-width: 0; }
+  .desc { color: var(--muted); margin: 8px 0 0; }
+  .codes { margin-top: 6px; font-size: 12px; color: var(--muted); }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 12px 0 4px; }
+  .status { display: inline-block; padding: 3px 10px; border-radius: 6px; font-weight: 700; font-family: ui-monospace, Menlo, monospace; }
+  .s2 { background: var(--ok-bg); color: var(--ok); } .s4 { background: var(--warn-bg); color: var(--warn); } .s5 { background: var(--err-bg); color: var(--err); }
+  pre { margin: 12px 0 0; padding: 12px; background: var(--bg); border-radius: 8px; overflow: auto; max-height: 55vh; font-size: 12.5px; }
+  .meta { color: var(--muted); font-size: 12px; margin-left: 8px; }
+  .hint { color: var(--muted); font-size: 12px; }
+  @media (max-width: 800px) {
+    main { grid-template-columns: 1fr; }
+    nav { max-height: 280px; border-right: 0; border-bottom: 1px solid var(--border); }
+    header, section.work { padding-left: 16px; padding-right: 16px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Retail API Tester <span class="hint">· <a href="/docs" target="_blank">Swagger</a> · <a href="/redoc" target="_blank">ReDoc</a></span></h1>
+  <div class="auth">
+    <input id="email" type="email" placeholder="email" autocomplete="username">
+    <input id="password" type="password" placeholder="password" autocomplete="current-password">
+    <button id="loginBtn">Log in</button>
+    <span class="pill" id="who">Not logged in</span>
+    <button class="ghost" id="logoutBtn">Log out</button>
+  </div>
+</header>
+<main>
+  <nav id="nav"></nav>
+  <section class="work">
+    <div class="card">
+      <div class="req">
+        <span class="m" id="method">GET</span>
+        <input id="url" aria-label="Request path">
+        <button id="send">Send</button>
+      </div>
+      <p class="desc" id="desc"></p>
+      <div class="codes" id="codes"></div>
+      <div id="bodyWrap">
+        <label for="body">JSON body</label>
+        <textarea id="body" spellcheck="false"></textarea>
+      </div>
+      <p class="hint">The access token is attached automatically. Edit the path (ids, query params) or body freely.</p>
+    </div>
+    <div class="card">
+      <span class="status" id="status">—</span><span class="meta" id="meta"></span>
+      <pre id="out">Pick an endpoint on the left and press Send.</pre>
+    </div>
+  </section>
+</main>
+<script>
+const API = "/api/v1";
+const ENDPOINTS = [
+  ["System", "GET", "/health", "Liveness + DB check", null, "200, 503", true],
+  ["Auth", "POST", API + "/auth/register", "Create a staff account", {email: "jane@retailhub.in", password: "Passw0rd!", full_name: "Jane Doe", phone: "+91 98765 43210"}, "201, 409, 422"],
+  ["Auth", "POST", API + "/auth/login", "Log in (also fills tokens for this page)", {email: "admin@retailhub.in", password: ""}, "200, 401, 403, 429"],
+  ["Auth", "POST", API + "/auth/refresh", "Rotate tokens using the refresh token", "REFRESH", "200, 401"],
+  ["Auth", "POST", API + "/auth/logout", "Revoke current tokens", "LOGOUT", "204, 401"],
+  ["Auth", "GET", API + "/auth/me", "Current user profile", null, "200, 401"],
+  ["Auth", "PATCH", API + "/auth/me", "Update name / phone", {full_name: "New Name"}, "200, 401, 422"],
+  ["Auth", "POST", API + "/auth/change-password", "Change password (invalidates old tokens)", {old_password: "", new_password: "N3wPassword!"}, "204, 400, 401"],
+  ["Auth", "POST", API + "/auth/forgot-password", "Get a reset token (dummy mode returns it)", {email: "jane@retailhub.in"}, "202"],
+  ["Auth", "POST", API + "/auth/reset-password", "Reset password with token", {token: "", new_password: "Res3tPassword!"}, "204, 400"],
+  ["Users (admin)", "GET", API + "/users?page=1&size=20", "List users", null, "200, 401, 403"],
+  ["Users (admin)", "GET", API + "/users/1", "Get user", null, "200, 404"],
+  ["Users (admin)", "PATCH", API + "/users/2/role", "Change role", {role: "manager"}, "200, 400, 404"],
+  ["Users (admin)", "PATCH", API + "/users/2/status", "Activate / deactivate", {is_active: false}, "200, 400, 404"],
+  ["Users (admin)", "DELETE", API + "/users/2", "Soft delete user", null, "204, 400, 404"],
+  ["Categories", "GET", API + "/categories", "List categories", null, "200"],
+  ["Categories", "POST", API + "/categories", "Create category", {name: "Home & Kitchen", description: "Cookware, storage"}, "201, 409"],
+  ["Categories", "PUT", API + "/categories/1", "Update category", {name: "Electronics", description: "Gadgets & accessories"}, "200, 404, 409"],
+  ["Categories", "DELETE", API + "/categories/1", "Delete category", null, "204, 404, 409"],
+  ["Products", "GET", API + "/products?sort=-price&page=1&size=20", "List / search / filter products", null, "200, 400"],
+  ["Products", "GET", API + "/products/1", "Get product by id", null, "200, 404"],
+  ["Products", "GET", API + "/products/sku/ELEC-001", "Get product by SKU", null, "200, 404"],
+  ["Products", "POST", API + "/products", "Create product", {sku: "HOME-001", name: "Steel Water Bottle 1L", category_id: 1, supplier_id: 1, price: "549.00", cost_price: "320.00", stock_quantity: 50, reorder_level: 10}, "201, 404, 409, 422"],
+  ["Products", "PUT", API + "/products/1", "Replace product", {sku: "ELEC-001", name: "Wireless Mouse", category_id: 1, supplier_id: 1, price: "849.00", cost_price: "450.00", reorder_level: 20, is_active: true}, "200, 404, 409"],
+  ["Products", "PATCH", API + "/products/1", "Partial update", {price: "799.00"}, "200, 400, 404"],
+  ["Products", "DELETE", API + "/products/1", "Archive product", null, "204, 404"],
+  ["Inventory", "GET", API + "/inventory", "Stock levels", null, "200"],
+  ["Inventory", "GET", API + "/inventory/low-stock", "Low / out of stock SKUs", null, "200"],
+  ["Inventory", "POST", API + "/inventory/4/restock", "Restock", {quantity: 50, reason: "PO-1042 received"}, "200, 404, 422"],
+  ["Inventory", "POST", API + "/inventory/2/adjust", "Manual adjustment", {change: -2, reason: "Damaged in storage"}, "200, 400, 404"],
+  ["Inventory", "GET", API + "/inventory/1/movements", "Stock movement history", null, "200, 404"],
+  ["Suppliers", "GET", API + "/suppliers", "List suppliers", null, "200"],
+  ["Suppliers", "POST", API + "/suppliers", "Create supplier", {name: "Kitchen Hub Traders", email: "sales@kitchenhub.in", phone: "+91 80 4000 1234"}, "201, 409"],
+  ["Suppliers", "GET", API + "/suppliers/1", "Supplier with products", null, "200, 404"],
+  ["Suppliers", "DELETE", API + "/suppliers/1", "Delete supplier", null, "204, 404"],
+  ["Orders", "POST", API + "/orders", "Create sale (deducts stock)", {customer_name: "Walk-in", items: [{sku: "ELEC-001", quantity: 2}, {sku: "GROC-001", quantity: 1}]}, "201, 400, 404, 409"],
+  ["Orders", "GET", API + "/orders?page=1&size=20", "List orders", null, "200, 400"],
+  ["Orders", "GET", API + "/orders/1", "Get order", null, "200, 403, 404"],
+  ["Orders", "PATCH", API + "/orders/1/status", "Advance status", {status: "paid"}, "200, 400, 404"],
+  ["Orders", "POST", API + "/orders/1/cancel", "Cancel & restore stock", null, "200, 403, 404, 409"],
+  ["Reports", "GET", API + "/reports/summary", "Sales & inventory summary", null, "200, 403"],
+];
+
+const $ = id => document.getElementById(id);
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} },
+};
+let current = null;
+
+function renderNav() {
+  let group = null;
+  ENDPOINTS.forEach((ep, i) => {
+    if (ep[0] !== group) {
+      group = ep[0];
+      const h = document.createElement("h3"); h.textContent = group; $("nav").appendChild(h);
+    }
+    const b = document.createElement("button");
+    b.innerHTML = `<span class="m ${ep[1]}">${ep[1]}</span><span class="path"></span>`;
+    b.querySelector(".path").textContent = ep[2].replace(API, "");
+    b.title = ep[3];
+    b.onclick = () => select(i, b);
+    $("nav").appendChild(b);
+  });
+}
+
+function select(i, btn) {
+  document.querySelectorAll("nav button.active").forEach(x => x.classList.remove("active"));
+  btn.classList.add("active");
+  const [, method, path, desc, body, codes] = ENDPOINTS[i];
+  current = ENDPOINTS[i];
+  $("method").textContent = method; $("method").className = "m " + method;
+  $("url").value = path;
+  $("desc").textContent = desc;
+  $("codes").textContent = "Expected: " + codes;
+  let b = body;
+  if (body === "REFRESH" || body === "LOGOUT") b = {refresh_token: store.get("refresh") || ""};
+  $("bodyWrap").style.display = b ? "" : "none";
+  $("body").value = b ? JSON.stringify(b, null, 2) : "";
+}
+
+async function call(method, url, bodyText) {
+  const headers = {};
+  const token = store.get("access");
+  if (token) headers.Authorization = "Bearer " + token;
+  let body;
+  if (bodyText && bodyText.trim()) { headers["Content-Type"] = "application/json"; body = bodyText; }
+  const t0 = performance.now();
+  const res = await fetch(url, {method, headers, body});
+  const ms = Math.round(performance.now() - t0);
+  const text = await res.text();
+  let data = null; try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+  return {res, data, ms};
+}
+
+function show({res, data, ms}) {
+  $("status").textContent = res.status + " " + res.statusText;
+  $("status").className = "status s" + String(res.status)[0];
+  $("meta").textContent = `${ms} ms · request id ${res.headers.get("X-Request-ID") || "-"}`;
+  $("out").textContent = data === null ? "(empty body)" : typeof data === "string" ? data : JSON.stringify(data, null, 2);
+}
+
+function rememberTokens(path, r) {
+  if (r.res.ok && r.data && r.data.access_token) {
+    store.set("access", r.data.access_token); store.set("refresh", r.data.refresh_token); refreshWho();
+  }
+  if (path.endsWith("/auth/logout") && r.res.status === 204) { store.set("access", null); store.set("refresh", null); refreshWho(); }
+}
+
+async function refreshWho() {
+  if (!store.get("access")) { $("who").textContent = "Not logged in"; return; }
+  const r = await call("GET", API + "/auth/me");
+  $("who").textContent = r.res.ok ? `${r.data.email} · ${r.data.role}` : "Token invalid / expired";
+}
+
+$("send").onclick = async () => {
+  if (!current) return;
+  const method = current[1];
+  const url = $("url").value;
+  const bodyText = $("bodyWrap").style.display === "none" ? "" : $("body").value;
+  try {
+    if (bodyText.trim()) JSON.parse(bodyText);
+  } catch (e) { $("out").textContent = "Body is not valid JSON: " + e.message; return; }
+  const r = await call(method, url, bodyText);
+  show(r); rememberTokens(url, r);
+};
+
+$("loginBtn").onclick = async () => {
+  const r = await call("POST", API + "/auth/login", JSON.stringify({email: $("email").value, password: $("password").value}));
+  show(r); rememberTokens("/auth/login", r);
+};
+
+$("logoutBtn").onclick = async () => {
+  if (!store.get("access")) return;
+  const r = await call("POST", API + "/auth/logout", JSON.stringify({refresh_token: store.get("refresh")}));
+  show(r); store.set("access", null); store.set("refresh", null); refreshWho();
+};
+
+renderNav();
+refreshWho();
+</script>
+</body>
+</html>
