@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     #   oauth2   client credentials at POST /oauth/token → Bearer <token>
     # The OpenAPI spec declares only the active mode (app/auth_modes.py).
     # A path prefix picks another mode per request: /basic, /apikey, /oauth2.
-    auth_mode: Literal["bearer", "basic", "api_key", "oauth2"] = "bearer"
+    auth_mode: Literal["bearer", "basic", "api_key", "oauth2"] = "oauth2"
     client_token_minutes: int = 15
 
     jwt_secret: str
