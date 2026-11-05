@@ -6,6 +6,9 @@ import pytest
 _db_file = os.path.join(tempfile.mkdtemp(), "test.db")
 os.environ["DATABASE_URL"] = f"sqlite:///{_db_file}"
 os.environ["JWT_SECRET"] = "test-secret-" + "x" * 40
+# Each deploy branch defaults to its own login; the suite runs as bearer and
+# switches per test (tests/test_auth_modes.py).
+os.environ["AUTH_MODE"] = "bearer"
 os.environ["SEED_ADMIN_EMAIL"] = "admin@retailhub.in"
 os.environ["SEED_ADMIN_PASSWORD"] = "Admin12345"
 

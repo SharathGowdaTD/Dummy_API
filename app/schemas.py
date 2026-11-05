@@ -327,3 +327,67 @@ class SummaryOut(BaseModel):
     total_skus: int
     low_stock_skus: int
     out_of_stock_skus: int
+
+
+# ── API keys and OAuth clients (app/auth_modes.py) ───────────────────────
+
+Scope = Annotated[str, Field(pattern=r"^(read|write)$")]
+
+
+class ApiKeyIn(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    user_id: int = Field(description="The user the key acts as: its role applies")
+    scopes: list[Scope] = Field(default=["read", "write"], min_length=1)
+    expires_in_days: int | None = Field(default=None, ge=1, le=365)
+
+
+class ApiKeyOut(ORM):
+    id: int
+    name: str
+    prefix: str
+    user_id: int
+    scopes: list[str]
+    is_active: bool
+    expires_at: datetime | None
+    created_at: datetime
+
+    @field_validator("scopes", mode="before")
+    @classmethod
+    def _split(cls, v):
+        return v.split() if isinstance(v, str) else v
+
+
+class ApiKeyCreated(ApiKeyOut):
+    key: str = Field(description="Shown once: only its hash is kept")
+
+
+class OAuthClientIn(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    user_id: int = Field(description="The user the client's tokens act as: its role applies")
+    scopes: list[Scope] = Field(default=["read", "write"], min_length=1)
+
+
+class OAuthClientOut(ORM):
+    id: int
+    name: str
+    client_id: str
+    user_id: int
+    scopes: list[str]
+    is_active: bool
+    created_at: datetime
+
+    @field_validator("scopes", mode="before")
+    @classmethod
+    def _split(cls, v):
+        return v.split() if isinstance(v, str) else v
+
+
+class OAuthClientCreated(OAuthClientOut):
+    client_secret: str = Field(description="Shown once: only its hash is kept")
+
+
+class ClientTokenOut(BaseModel):
+    access_token: str
+    token_type: str = "Bearer"
+    expires_in: int
+    scope: str

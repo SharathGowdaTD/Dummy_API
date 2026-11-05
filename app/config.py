@@ -1,5 +1,6 @@
 from decimal import Decimal
 from functools import lru_cache
+from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import URL
@@ -18,6 +19,17 @@ class Settings(BaseSettings):
     db_name: str = "postgres"
     db_user: str = "postgres"
     db_password: str = ""
+
+    # How callers prove who they are. One codebase, one mode per deployment,
+    # so each URL shows a different kind of login on the same endpoints:
+    #   bearer   POST /auth/login → Authorization: Bearer <jwt>   (default)
+    #   basic    Authorization: Basic base64(email:password), every call
+    #   api_key  X-API-Key header, ?api_key= or the retail_key cookie
+    #   oauth2   client credentials at POST /oauth/token → Bearer <token>
+    # The OpenAPI spec declares only the active mode (app/auth_modes.py).
+    # A path prefix picks another mode per request: /basic, /apikey, /oauth2.
+    auth_mode: Literal["bearer", "basic", "api_key", "oauth2"] = "bearer"
+    client_token_minutes: int = 15
 
     jwt_secret: str
     jwt_algorithm: str = "HS256"

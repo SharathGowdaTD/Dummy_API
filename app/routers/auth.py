@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
 
+from app.auth_modes import only_in
 from app.config import get_settings
 from app.deps import DB, CurrentUser, as_utc, get_token_payload, load_user_from_token
 from app.errors import AppError
@@ -76,6 +77,7 @@ def register(body: RegisterIn, db: DB):
 
 @router.post(
     "/login",
+    dependencies=[only_in("bearer")],
     response_model=TokenOut,
     responses={401: {"description": "Bad credentials"}, 403: {"description": "Inactive"}, 429: {"description": "Rate limited"}},
 )
@@ -92,7 +94,7 @@ def login(body: LoginIn, request: Request, db: DB):
     return _issue_tokens(user)
 
 
-@router.post("/refresh", response_model=TokenOut)
+@router.post("/refresh", response_model=TokenOut, dependencies=[only_in("bearer")])
 def refresh(body: RefreshIn, db: DB):
     user, payload = load_user_from_token(db, body.refresh_token, "refresh")
     _revoke(db, payload)  # rotation: each refresh token is single-use
@@ -100,7 +102,7 @@ def refresh(body: RefreshIn, db: DB):
     return _issue_tokens(user)
 
 
-@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT, dependencies=[only_in("bearer")])
 def logout(ctx: Annotated[tuple[User, dict], Depends(get_token_payload)], db: DB, body: LogoutIn | None = None):
     _revoke(db, ctx[1])
     if body and body.refresh_token:

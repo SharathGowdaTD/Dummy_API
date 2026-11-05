@@ -11,7 +11,8 @@ from sqlalchemy import text
 from app.config import get_settings
 from app.database import engine
 from app.errors import register_exception_handlers
-from app.routers import auth, categories, inventory, orders, products, reports, suppliers, users
+from app.auth_modes import PathMode, install_openapi
+from app.routers import access, auth, categories, inventory, orders, products, reports, suppliers, users
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 logger = logging.getLogger("app")
@@ -49,6 +50,12 @@ register_exception_handlers(app)
 
 for router in (auth, users, categories, products, inventory, suppliers, orders, reports):
     app.include_router(router.router, prefix=settings.api_prefix)
+app.include_router(access.keys, prefix=settings.api_prefix)
+app.include_router(access.oauth, prefix=settings.api_prefix)
+install_openapi(app)
+# Outermost: picks the login by the URL's first segment (/basic, /apikey,
+# /oauth2) before anything else sees the request.
+app.add_middleware(PathMode)
 
 
 @app.get("/health", tags=["System"])

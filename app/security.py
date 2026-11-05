@@ -48,6 +48,16 @@ def create_refresh_token(user_id: int, role: str) -> str:
     return _create_token(user_id, role, "refresh", timedelta(days=settings.refresh_token_days))[0]
 
 
+def create_client_token(user_id: int, role: str, client_id: str, scope: str) -> tuple[str, datetime]:
+    """An OAuth2 client-credentials access token: acts as the client's
+    owner, limited to `scope`. No refresh token; ask for a new one."""
+    now = datetime.now(UTC)
+    expires = now + timedelta(minutes=settings.client_token_minutes)
+    payload = {"sub": str(user_id), "role": role, "type": "client", "cid": client_id, "scope": scope,
+               "jti": uuid.uuid4().hex, "iat": int(now.timestamp()), "exp": expires}
+    return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm), expires
+
+
 def decode_token(token: str, expected_type: str) -> dict:
     try:
         payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])

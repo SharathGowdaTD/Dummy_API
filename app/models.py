@@ -56,6 +56,39 @@ class User(TimestampMixin, Base):
     password_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
+class ApiKey(Base):
+    """A key for AUTH_MODE=api_key. Only its sha256 is kept; the raw key is
+    shown once, when it is made. It acts as its owner, limited to its scopes."""
+
+    __tablename__ = "api_keys"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(80))
+    prefix: Mapped[str] = mapped_column(String(16))
+    key_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    scopes: Mapped[str] = mapped_column(String(80), default="read write")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class OAuthClient(Base):
+    """An app for AUTH_MODE=oauth2 (client credentials). Only the secret's
+    sha256 is kept. Its tokens act as its owner, limited to its scopes."""
+
+    __tablename__ = "oauth_clients"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(80))
+    client_id: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    secret_hash: Mapped[str] = mapped_column(String(64))
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    scopes: Mapped[str] = mapped_column(String(80), default="read write")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
 class RevokedToken(Base):
     __tablename__ = "revoked_tokens"
 
